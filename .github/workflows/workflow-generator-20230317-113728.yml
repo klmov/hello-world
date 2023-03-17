@@ -1,0 +1,44 @@
+name: Test Name
+'on':
+  push:
+    branches:
+    - main
+    - dev
+env:
+  AWS_REGION: us-east-1
+  ECS_TASK_DEFINITION: ECS_TASK
+  CONTAINER_NAME: test-container
+  ECS_SERVICE: ''
+  ECS_CLUSTER: ''
+jobs:
+  Build-Python-Package-and-publish-it:
+    runs-on: external-k8s
+    steps:
+    - uses: actions/checkout@v3
+    - name: Set up Python
+      uses: actions/setup-python@v3
+      with:
+        python-version: 3.x
+    - name: Install dependencies
+      run: 'python -m pip install --upgrade pip
+
+        pip install build
+
+        '
+    - name: Build package
+      run: python -m build
+    - name: Publish package
+      uses: pypa/gh-action-pypi-publish@27b31702a0e7fc50959f5ad993c78deac1bdfc29
+      with:
+        user: __token__
+        password: ${{ secrets.PYPI_API_TOKEN }}
+  Scan-code-with-Sonar:
+    steps:
+    - name: Analyze with SonarCloud
+      uses: SonarSource/sonarcloud-github-action@de2e56b42aa84d0b1c5b622644ac17e505c9a049
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+      with:
+        args: -Dsonar.projectKey= -Dsonar.organization=
+    runs-on: external-k8s
