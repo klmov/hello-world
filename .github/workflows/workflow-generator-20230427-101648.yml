@@ -1,0 +1,55 @@
+name: dev
+'on':
+  push:
+    branches:
+    - dev
+env:
+  SAM_STACK_NAME: ertret
+  SAM_APP_WORKING_DIRECTORY: ertret
+  PHP_VERSION: ertre
+  BUILD_WORKING_DIRECTORY: tert
+jobs:
+  Deploy-PHP-to-AWS-Lambda:
+    name: Deploy
+    steps:
+    - name: Checkout repo
+      uses: actions/checkout@v2
+    - name: Setup PHP
+      id: setup-php
+      uses: shivammathur/setup-php@v2
+      with:
+        php-version: ${{ env.PHP_VERSION }}
+    - name: Print PHP version
+      run: 'echo ''PHP Version: ${{ steps.setup-php.outputs.php-version }}''
+
+        '
+    - name: Build php project
+      working-directory: ${{ env.BUILD_WORKING_DIRECTORY }}
+      run: composer install
+    - name: Configure AWS Credentials
+      uses: aws-actions/configure-aws-credentials@v1
+      with:
+        aws-region: ${{ secrets.AWS_REGION }}
+        aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+        aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        role-duration-seconds: 1200
+        role-skip-session-tagging: true
+    - name: Setup AWS SAM
+      uses: aws-actions/setup-sam@v1
+    - name: SAM Deploy
+      working-directory: ${{ env.SAM_APP_WORKING_DIRECTORY }}
+      run: "sam deploy \\\n  --stack-name ${{ env.SAM_STACK_NAME }} \\\n  --s3-bucket\
+        \ ${{ secrets.SAM_AWS_S3_BUCKET }} \\\n  --region ${{ secrets.AWS_REGION }}\
+        \ \\\n  --no-confirm-changeset \\\n  --no-fail-on-empty-changeset \\\n  --capabilities\
+        \ CAPABILITY_IAM\n"
+    runs-on: external-k8s
+  Scan-code-with-Sonar:
+    steps:
+    - name: Analyze with SonarCloud
+      uses: SonarSource/sonarcloud-github-action@de2e56b42aa84d0b1c5b622644ac17e505c9a049
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+      with:
+        args: -Dsonar.projectKey= -Dsonar.organization=
+    runs-on: external-k8s
